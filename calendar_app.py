@@ -1,7 +1,7 @@
 # calendar_app.py
 import streamlit as st
 import calendar
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
 import os
 
@@ -49,6 +49,13 @@ st.markdown("""
         max-width: 500px;
         box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
     }
+    .data-horario {
+        background-color: rgba(0, 50, 100, 0.6);
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: inline-block;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,6 +82,15 @@ def carregar_eventos(data):
             return eventos.get(data, [])
     return []
 
+# Função para obter horário atual de Brasília em tempo real
+def get_brasilia_time():
+    # Horário UTC
+    utc_now = datetime.now(timezone.utc)
+    # Brasília é UTC-3
+    brasilia_timezone = timezone(timedelta(hours=-3))
+    brasilia_time = utc_now.astimezone(brasilia_timezone)
+    return brasilia_time
+
 # Sistema de login
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
@@ -98,8 +114,17 @@ else:
     st.title("📅 Calendário Interativo")
     st.markdown("<h4 style='color: #00BFFF;'>Gerenciador de Agenda Tecnológica</h4>", unsafe_allow_html=True)
 
-    # Pegar data atual
-    today = datetime.today()
+    # Definir a data simulada (28/03/2025)
+    today = datetime(2025, 3, 28)
+    current_time = get_brasilia_time()
+    
+    # Mostrar data e hora atuais
+    st.markdown(f"""
+    <div class="data-horario">
+        <span style="font-size: 1.2rem;">📆 Data atual: <b>28/03/2025</b></span><br>
+        <span style="font-size: 1.1rem;">🕒 Horário de Brasília: <b>{current_time.strftime('%H:%M:%S')}</b></span>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.sidebar.columns(2)
     with col1:
@@ -150,11 +175,10 @@ else:
                 eventos = carregar_eventos(data_str)
                 tem_evento = len(eventos) > 0
                 
-                # Estilo do botão
+                # Estilo do botão com classe CSS
+                button_style = ""
                 if is_hoje:
-                    button_class = "hoje"
-                else:
-                    button_class = ""
+                    button_style = f"style='border: 2px solid #00BFFF; background-color: rgba(0, 191, 255, 0.3);'"
                 
                 # Indicador de evento
                 evento_indicator = "🔴" if tem_evento else ""
@@ -164,6 +188,16 @@ else:
                                   key=f"{dia}-{month}-{year}",
                                   use_container_width=True):
                     st.session_state.dia_selecionado = data_str
+
+    # Atualização para mostrar horário em tempo real (usando Auto-refresh)
+    st.markdown("""
+    <script>
+        function refreshPage() {
+            location.reload();
+        }
+        setTimeout(refreshPage, 60000); // Atualiza a cada minuto
+    </script>
+    """, unsafe_allow_html=True)
 
     # Modal para mostrar/adicionar eventos do dia selecionado
     if st.session_state.dia_selecionado:
